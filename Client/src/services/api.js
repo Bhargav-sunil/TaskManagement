@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "http://localhost:5000/v1";
+const API_BASE = "https://taskmanagement-ulj6.onrender.com/v1";
 
 const api = axios.create({
   baseURL: API_BASE,
