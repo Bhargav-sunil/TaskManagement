@@ -22,22 +22,25 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [tasksResponse] = await Promise.all([
-        ApiService.getTasks({ limit: 5, page: 1 }),
-      ]);
+      // Get overall task counts (without pagination for stats)
+      const tasksResponse = await ApiService.getTasks({ limit: 1000 }); // Large limit to get all tasks for counting
+
+      // Get recent tasks for display (limited to 5)
+      const recentTasksResponse = await ApiService.getTasks({ limit: 5 });
 
       if (tasksResponse.success) {
-        const tasks = tasksResponse.data.tasks;
-        setRecentTasks(tasks);
+        const allTasks = tasksResponse.data.tasks;
+        const totalTasks =
+          tasksResponse.data.pagination?.total || allTasks.length;
 
-        const totalTasks = tasksResponse.data.pagination?.total || tasks.length;
-        const pendingTasks = tasks.filter(
+        // Count tasks by status from ALL tasks, not just recent ones
+        const pendingTasks = allTasks.filter(
           (task) => task.status === "pending"
         ).length;
-        const inProgressTasks = tasks.filter(
+        const inProgressTasks = allTasks.filter(
           (task) => task.status === "in progress"
         ).length;
-        const completedTasks = tasks.filter(
+        const completedTasks = allTasks.filter(
           (task) => task.status === "completed"
         ).length;
 
@@ -47,6 +50,10 @@ const Dashboard = () => {
           inProgressTasks,
           completedTasks,
         });
+      }
+
+      if (recentTasksResponse.success) {
+        setRecentTasks(recentTasksResponse.data.tasks);
       }
     } catch (error) {
       setError("Failed to load dashboard data");
