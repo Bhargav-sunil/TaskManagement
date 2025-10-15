@@ -18,7 +18,6 @@ const TaskModal = ({ task, onSave, onClose, isAdmin, isOpen }) => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [usersLoading, setUsersLoading] = useState(false)
 
-  // Fetch users when modal opens and user is admin
   useEffect(() => {
     if (isAdmin && isOpen) {
       fetchUsers()
