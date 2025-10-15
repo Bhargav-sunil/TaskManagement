@@ -1,141 +1,143 @@
-import React, { useState, useEffect } from "react";
-import ApiService from "../../services/api";
-import "./TaskModal.css";
+import React, { useState, useEffect } from 'react'
+import ApiService from '../../services/api'
+import './TaskModal.css'
 
-const TaskModal = ({ task, onSave, onClose, isAdmin }) => {
+const TaskModal = ({ task, onSave, onClose, isAdmin, isOpen }) => {
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    priority: "medium",
-    status: "pending",
-    due_date: "",
-    user_id: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [users, setUsers] = useState([]);
-  const [userSearch, setUserSearch] = useState("");
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
+    title: '',
+    description: '',
+    priority: 'medium',
+    status: 'pending',
+    due_date: '',
+    user_id: ''
+  })
+  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [users, setUsers] = useState([])
+  const [userSearch, setUserSearch] = useState('')
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [usersLoading, setUsersLoading] = useState(false)
+
+  // Fetch users when modal opens and user is admin
+  useEffect(() => {
+    if (isAdmin && isOpen) {
+      fetchUsers()
+    }
+  }, [isAdmin, isOpen])
 
   useEffect(() => {
     if (task) {
-      const assignedUser = users.find((u) => u.id === task.user_id);
+      const assignedUser = users.find(u => u.id === task.user_id)
       setFormData({
-        title: task.title || "",
-        description: task.description || "",
-        priority: task.priority || "medium",
-        status: task.status || "pending",
-        due_date: task.due_date ? task.due_date.split("T")[0] : "",
-        user_id: task.user_id || "",
-      });
-      setUserSearch(
-        assignedUser ? `${assignedUser.name} (${assignedUser.email})` : ""
-      );
+        title: task.title || '',
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        status: task.status || 'pending',
+        due_date: task.due_date ? task.due_date.split('T')[0] : '',
+        user_id: task.user_id || ''
+      })
+      setUserSearch(assignedUser ? `${assignedUser.name} (${assignedUser.email})` : '')
     }
-  }, [task, users]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-    }
-  }, [isAdmin]);
+  }, [task, users])
 
   const fetchUsers = async () => {
+    if (!isAdmin) return;
+    
     try {
-      const response = await ApiService.getUsers();
+      setUsersLoading(true)
+      const response = await ApiService.getUsers({ limit: 100 }) 
       if (response.success) {
-        setUsers(response.data.users);
+        setUsers(response.data.users)
       }
     } catch (error) {
-      console.error("Failed to fetch users:", error);
+      console.error('Failed to fetch users:', error)
+    } finally {
+      setUsersLoading(false)
     }
-  };
+  }
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
+    const { name, value } = e.target
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
-    }));
+      [name]: value
+    }))
     if (errors[name]) {
-      setErrors((prev) => ({
+      setErrors(prev => ({
         ...prev,
-        [name]: "",
-      }));
+        [name]: ''
+      }))
     }
-  };
+  }
 
   const handleUserSearchChange = (e) => {
-    const value = e.target.value;
-    setUserSearch(value);
-    setShowUserDropdown(true);
-
+    const value = e.target.value
+    setUserSearch(value)
+    setShowUserDropdown(true)
+    
     if (!value.trim()) {
-      setFormData((prev) => ({ ...prev, user_id: "" }));
+      setFormData(prev => ({ ...prev, user_id: '' }))
     }
-  };
+  }
 
   const selectUser = (user) => {
-    setFormData((prev) => ({ ...prev, user_id: user.id }));
-    setUserSearch(`${user.name} (${user.email})`);
-    setShowUserDropdown(false);
-  };
+    setFormData(prev => ({ ...prev, user_id: user.id }))
+    setUserSearch(`${user.name} (${user.email})`)
+    setShowUserDropdown(false)
+  }
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-      user.email.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.email.toLowerCase().includes(userSearch.toLowerCase())
+  )
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors = {}
 
     if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+      newErrors.title = 'Title is required'
     } else if (formData.title.length < 2) {
-      newErrors.title = "Title must be at least 2 characters";
+      newErrors.title = 'Title must be at least 2 characters'
     }
 
     if (formData.description && formData.description.length > 500) {
-      newErrors.description = "Description must not exceed 500 characters";
+      newErrors.description = 'Description must not exceed 500 characters'
     }
 
     if (formData.due_date) {
-      const dueDate = new Date(formData.due_date);
+      const dueDate = new Date(formData.due_date)
       if (isNaN(dueDate.getTime())) {
-        newErrors.due_date = "Invalid date format";
+        newErrors.due_date = 'Invalid date format'
       } else if (dueDate < new Date().setHours(0, 0, 0, 0)) {
-        newErrors.due_date = "Due date cannot be in the past";
+        newErrors.due_date = 'Due date cannot be in the past'
       }
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-
+    e.preventDefault()
+    
     if (!validateForm()) {
-      return;
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
-      await onSave(formData);
+      await onSave(formData)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="modal-overlay">
       <div className="modal">
         <div className="modal-header">
-          <h2>{task ? "Edit Task" : "Create New Task"}</h2>
-          <button className="modal-close" onClick={onClose}>
-            ×
-          </button>
+          <h2>{task ? 'Edit Task' : 'Create New Task'}</h2>
+          <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
@@ -147,15 +149,13 @@ const TaskModal = ({ task, onSave, onClose, isAdmin }) => {
               type="text"
               id="title"
               name="title"
-              className={`form-control ${errors.title ? "error" : ""}`}
+              className={`form-control ${errors.title ? 'error' : ''}`}
               value={formData.title}
               onChange={handleChange}
               disabled={loading}
               placeholder="Enter task title"
             />
-            {errors.title && (
-              <span className="error-message">{errors.title}</span>
-            )}
+            {errors.title && <span className="error-message">{errors.title}</span>}
           </div>
 
           <div className="form-group">
@@ -165,16 +165,14 @@ const TaskModal = ({ task, onSave, onClose, isAdmin }) => {
             <textarea
               id="description"
               name="description"
-              className={`form-control ${errors.description ? "error" : ""}`}
+              className={`form-control ${errors.description ? 'error' : ''}`}
               rows="3"
               value={formData.description}
               onChange={handleChange}
               disabled={loading}
               placeholder="Enter task description (optional)"
             />
-            {errors.description && (
-              <span className="error-message">{errors.description}</span>
-            )}
+            {errors.description && <span className="error-message">{errors.description}</span>}
             <div className="char-count">
               {formData.description.length}/500 characters
             </div>
@@ -226,14 +224,12 @@ const TaskModal = ({ task, onSave, onClose, isAdmin }) => {
               type="date"
               id="due_date"
               name="due_date"
-              className={`form-control ${errors.due_date ? "error" : ""}`}
+              className={`form-control ${errors.due_date ? 'error' : ''}`}
               value={formData.due_date}
               onChange={handleChange}
               disabled={loading}
             />
-            {errors.due_date && (
-              <span className="error-message">{errors.due_date}</span>
-            )}
+            {errors.due_date && <span className="error-message">{errors.due_date}</span>}
           </div>
 
           {isAdmin && (
@@ -249,13 +245,16 @@ const TaskModal = ({ task, onSave, onClose, isAdmin }) => {
                   value={userSearch}
                   onChange={handleUserSearchChange}
                   onFocus={() => setShowUserDropdown(true)}
-                  disabled={loading}
-                  placeholder="Search users by name or email..."
+                  disabled={loading || usersLoading}
+                  placeholder={usersLoading ? "Loading users..." : "Search users by name or email..."}
                 />
-                {showUserDropdown && userSearch && (
+                {usersLoading && (
+                  <div className="users-loading">Loading users...</div>
+                )}
+                {showUserDropdown && userSearch && !usersLoading && (
                   <div className="user-dropdown">
                     {filteredUsers.length > 0 ? (
-                      filteredUsers.map((user) => (
+                      filteredUsers.map(user => (
                         <div
                           key={user.id}
                           className="user-option"
@@ -263,9 +262,7 @@ const TaskModal = ({ task, onSave, onClose, isAdmin }) => {
                         >
                           <div className="user-name">{user.name}</div>
                           <div className="user-email">{user.email}</div>
-                          <div className={`user-role ${user.role}`}>
-                            {user.role}
-                          </div>
+                          <div className={`user-role ${user.role}`}>{user.role}</div>
                         </div>
                       ))
                     ) : (
@@ -275,42 +272,39 @@ const TaskModal = ({ task, onSave, onClose, isAdmin }) => {
                 )}
               </div>
               <div className="help-text">
-                Start typing to search users by name or email. Leave empty to
-                assign to yourself.
+                Start typing to search users by name or email. Leave empty to assign to yourself.
               </div>
             </div>
           )}
 
           <div className="modal-actions">
-            <button
-              type="button"
+            <button 
+              type="button" 
               className="btn btn-secondary"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
             </button>
-            <button
-              type="submit"
+            <button 
+              type="submit" 
               className="btn btn-primary"
               disabled={loading}
             >
               {loading ? (
                 <span className="btn-loading">
                   <span className="spinner"></span>
-                  {task ? "Updating..." : "Creating..."}
+                  {task ? 'Updating...' : 'Creating...'}
                 </span>
-              ) : task ? (
-                "Update Task"
               ) : (
-                "Create Task"
+                task ? 'Update Task' : 'Create Task'
               )}
             </button>
           </div>
         </form>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TaskModal;
+export default TaskModal
