@@ -1,31 +1,55 @@
-import React, { useState, useEffect } from "react";
-import { useAuth } from "../../context/AuthContext";
-import ApiService from "../../services/api";
-import TaskModal from "./TaskModal";
-import Pagination from "../Pagination/Pagination";
-import "./TaskManagement.css";
+import React, { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../../context/AuthContext'
+import ApiService from '../../services/api'
+import TaskModal from './TaskModal'
+import Pagination from '../Pagination/Pagination'
+import './TaskManagement.css'
 
 const TaskManagement = () => {
-  const { user } = useAuth();
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { user } = useAuth()
+  const [tasks, setTasks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [editingTask, setEditingTask] = useState(null)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [filters, setFilters] = useState({
-    status: "",
-    priority: "",
-    search: "",
-  });
-  const [searchTerm, setSearchTerm] = useState("");
+    status: '',
+    priority: '',
+    search: ''
+  })
 
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalTasks: 0,
-    itemsPerPage: 10,
-  });
+    itemsPerPage: 10
+  })
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params = {
+        ...filters,
+        page: pagination.currentPage,
+        limit: pagination.itemsPerPage
+      }
+      
+      const response = await ApiService.getTasks(params)
+      if (response.success) {
+        setTasks(response.data.tasks)
+        setPagination(prev => ({
+          ...prev,
+          totalPages: response.data.pagination.pages,
+          totalTasks: response.data.pagination.total
+        }))
+      }
+    } catch (error) {
+      setError('Failed to fetch tasks')
+    } finally {
+      setLoading(false)
+    }
+  }, [filters, pagination.currentPage, pagination.itemsPerPage])
 
   useEffect(() => {
     fetchTasks();
@@ -38,44 +62,19 @@ const TaskManagement = () => {
     return () => clearTimeout(delayDebounce);
   }, [filters.search]);
 
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        ...filters,
-        page: pagination.currentPage,
-        limit: pagination.itemsPerPage,
-      };
-
-      const response = await ApiService.getTasks(params);
-      if (response.success) {
-        setTasks(response.data.tasks);
-        setPagination((prev) => ({
-          ...prev,
-          totalPages: response.data.pagination.pages,
-          totalTasks: response.data.pagination.total,
-        }));
-      }
-    } catch (error) {
-      setError("Failed to fetch tasks");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreateTask = async (taskData) => {
     try {
-      const response = await ApiService.createTask(taskData);
+      const response = await ApiService.createTask(taskData)
       if (response.success) {
-        setSuccess("Task created successfully");
-        setShowModal(false);
-        setPagination((prev) => ({ ...prev, currentPage: 1 }));
-        fetchTasks();
+        setSuccess('Task created successfully')
+        setShowModal(false)
+        setPagination(prev => ({ ...prev, currentPage: 1 }))
+        fetchTasks()
       }
     } catch (error) {
-      setError(error.message || "Failed to create task");
+      setError(error.message || 'Failed to create task')
     }
-  };
+  }
 
   const handleUpdateTask = async (taskData) => {
     try {
@@ -357,10 +356,11 @@ const TaskManagement = () => {
           task={editingTask}
           onSave={editingTask ? handleUpdateTask : handleCreateTask}
           onClose={() => {
-            setShowModal(false);
-            setEditingTask(null);
+            setShowModal(false)
+            setEditingTask(null)
           }}
-          isAdmin={user.role === "admin"}
+          isAdmin={user.role === 'admin'}
+          isOpen={showModal}
         />
       )}
     </div>
