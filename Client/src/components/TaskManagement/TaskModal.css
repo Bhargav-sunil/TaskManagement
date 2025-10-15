@@ -339,3 +339,12 @@
   color: #666;
   font-style: italic;
 }
+
+.users-loading {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background: #f8f9fa;
+  border-radius: 0 0 8px 8px;
+}
