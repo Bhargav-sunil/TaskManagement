@@ -21,6 +21,7 @@ const getAllUsers = (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
+    // Only apply user restriction for non-admin users
     if (req.user.role !== 'admin') {
       query += ' AND id = ?';
       countQuery += ' AND id = ?';
