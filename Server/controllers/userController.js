@@ -8,54 +8,46 @@ const {
 const getAllUsers = (req, res) => {
   try {
     const db = database.getDb();
-    const { page = 1, limit = 10, search = "" } = req.query;
+    const { page = 1, limit = 50, search = '' } = req.query;
     const offset = (page - 1) * limit;
 
-    let query = "SELECT id, name, email, role, created_at FROM users WHERE 1=1";
-    let countQuery = "SELECT COUNT(*) as total FROM users WHERE 1=1";
+    let query = 'SELECT id, name, email, role, created_at FROM users WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as total FROM users WHERE 1=1';
     const params = [];
-    const countParams = [];
 
     if (search) {
-      query += " AND (name LIKE ? OR email LIKE ?)";
-      countQuery += " AND (name LIKE ? OR email LIKE ?)";
+      query += ' AND (name LIKE ? OR email LIKE ?)';
+      countQuery += ' AND (name LIKE ? OR email LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
-      countParams.push(`%${search}%`, `%${search}%`);
     }
 
-    // For non-admin users, only show themselves
-    if (req.user.role !== "admin") {
-      query += " AND id = ?";
-      countQuery += " AND id = ?";
+    if (req.user.role !== 'admin') {
+      query += ' AND id = ?';
+      countQuery += ' AND id = ?';
       params.push(req.user.id);
-      countParams.push(req.user.id);
     }
 
-    query += " ORDER BY id ASC LIMIT ? OFFSET ?";
+    query += ' ORDER BY name ASC LIMIT ? OFFSET ?';
+    const countParams = [...params];
     params.push(parseInt(limit), offset);
 
-    // First get total count
     db.get(countQuery, countParams, (err, countResult) => {
       if (err) {
-        console.error("Database error in getAllUsers count:", err);
+        console.error('Database error in getAllUsers:', err);
         return res.status(500).json({
           success: false,
-          message: "Database error",
+          message: 'Database error'
         });
       }
 
-      // Then get paginated users
       db.all(query, params, (err, users) => {
         if (err) {
-          console.error("Database error in getAllUsers:", err);
+          console.error('Database error in getAllUsers:', err);
           return res.status(500).json({
             success: false,
-            message: "Database error",
+            message: 'Database error'
           });
         }
-
-        const total = countResult.total;
-        const pages = Math.ceil(total / limit);
 
         res.json({
           success: true,
@@ -64,18 +56,18 @@ const getAllUsers = (req, res) => {
             pagination: {
               page: parseInt(page),
               limit: parseInt(limit),
-              total: total,
-              pages: pages,
-            },
-          },
+              total: countResult.total,
+              pages: Math.ceil(countResult.total / limit)
+            }
+          }
         });
       });
     });
   } catch (error) {
-    console.error("Server error in getAllUsers:", error);
+    console.error('Server error in getAllUsers:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: 'Server error'
     });
   }
 };
